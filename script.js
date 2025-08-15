@@ -21,7 +21,7 @@ function createThumbnail(item) {
     if (item.class == 'Image' && !uniqueUrls.has(item.image.display.url)) {
         let thumb_el = document.createElement('div');
         thumb_el.classList.add('thumb');
-        thumb_el.innerHTML = `<img src="${item.image.thumb.url}" data-large="${item.image.display.url}">`;
+        thumb_el.innerHTML = `<img src="${item.image.thumb.url}" data-large="${item.image.display.url}" data-title="${item.title || ''}">`;
         thumb_el.classList.add('image');
         
         // Add click listener immediately for each thumbnail
@@ -91,6 +91,11 @@ fetchAllContents();
 const viewer = document.querySelector('#viewer');
 const viewer_img = document.querySelector('#viewer img');
 
+// Create title element
+const titleEl = document.createElement('div');
+titleEl.id = 'image-title';
+viewer.appendChild(titleEl);
+
 // Track current image index
 let currentImageIndex = -1;
 
@@ -102,6 +107,16 @@ function showImage(index) {
         viewer.style.display = 'flex';
         viewer_img.style.display = 'block';
         viewer_img.src = img.dataset.large;
+        
+        // Show title if it exists
+        const title = img.dataset.title;
+        if (title) {
+            titleEl.textContent = title;
+            titleEl.style.display = 'block';
+        } else {
+            titleEl.style.display = 'none';
+        }
+        
         currentImageIndex = index;
     }
 }
@@ -110,6 +125,7 @@ function showImage(index) {
 function closeViewer() {
     viewer.style.display = 'none';
     viewer_img.src = '';
+    titleEl.style.display = 'none';
     currentImageIndex = -1;
 }
 
