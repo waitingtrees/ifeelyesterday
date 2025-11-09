@@ -33,6 +33,21 @@ function createThumbnail(item) {
         thumbs_el.appendChild(thumb_el);
         uniqueUrls.add(item.image.display.url);
         allImages.push(item);
+    } else if (item.class == 'Text') {
+        let thumb_el = document.createElement('div');
+        thumb_el.classList.add('thumb', 'text-block');
+        const escapedContent = item.content.replace(/"/g, '&quot;');
+        const escapedTitle = (item.title || '').replace(/"/g, '&quot;');
+        thumb_el.innerHTML = `<div class="text-content" data-content="${escapedContent}" data-title="${escapedTitle}">${item.content}</div>`;
+        
+        // Add click listener for text blocks
+        thumb_el.addEventListener('click', e => {
+            currentImageIndex = Array.from(thumbs_el.children).indexOf(thumb_el);
+            showText(currentImageIndex);
+        });
+        
+        thumbs_el.appendChild(thumb_el);
+        allImages.push(item);
     }
 }
 
@@ -81,7 +96,7 @@ async function fetchAllContents() {
     
     // Hide loading element when done
     loadingEl.style.display = 'none';
-    console.log(`Loaded ${allImages.length} unique images`);
+    console.log(`Loaded ${allImages.length} items`);
 }
 
 // Start fetching contents
@@ -99,11 +114,56 @@ viewer.appendChild(titleEl);
 // Track current image index
 let currentImageIndex = -1;
 
+// Function to show text at specific index
+function showText(index) {
+    const thumbs = Array.from(thumbs_el.children);
+    if (index >= 0 && index < thumbs.length) {
+        const textDiv = thumbs[index].querySelector('.text-content');
+        if (textDiv) {
+            viewer.style.display = 'flex';
+            viewer_img.style.display = 'none';
+            
+            // Create or update text viewer
+            let textViewer = document.querySelector('#text-viewer');
+            if (!textViewer) {
+                textViewer = document.createElement('div');
+                textViewer.id = 'text-viewer';
+                viewer.appendChild(textViewer);
+            }
+            textViewer.style.display = 'block';
+            textViewer.innerHTML = textDiv.dataset.content;
+            
+            // Show title if it exists
+            const title = textDiv.dataset.title;
+            if (title) {
+                titleEl.textContent = title;
+                titleEl.style.display = 'block';
+            } else {
+                titleEl.style.display = 'none';
+            }
+            
+            currentImageIndex = index;
+        }
+    }
+}
+
 // Function to show image at specific index
 function showImage(index) {
     const thumbs = Array.from(thumbs_el.children);
     if (index >= 0 && index < thumbs.length) {
-        const img = thumbs[index].querySelector('img');
+        const thumb = thumbs[index];
+        
+        // Hide text viewer if it exists
+        const textViewer = document.querySelector('#text-viewer');
+        if (textViewer) textViewer.style.display = 'none';
+        
+        // Check if it's an image or text
+        if (thumb.classList.contains('text-block')) {
+            showText(index);
+            return;
+        }
+        
+        const img = thumb.querySelector('img');
         viewer.style.display = 'flex';
         viewer_img.style.display = 'block';
         viewer_img.src = img.dataset.large;
@@ -125,6 +185,8 @@ function showImage(index) {
 function closeViewer() {
     viewer.style.display = 'none';
     viewer_img.src = '';
+    const textViewer = document.querySelector('#text-viewer');
+    if (textViewer) textViewer.style.display = 'none';
     titleEl.style.display = 'none';
     currentImageIndex = -1;
 }

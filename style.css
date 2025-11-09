@@ -48,6 +48,23 @@ body {
     color: azure;
     cursor: zoom-in;
 }
+#thumbs .thumb.text-block {
+    background-color: #1a1a1a;
+    padding: 10px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+#thumbs .thumb.text-block .text-content {
+    color: white;
+    font-size: 11px;
+    line-height: 1.3;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    display: -webkit-box;
+    -webkit-line-clamp: 6;
+    -webkit-box-orient: vertical;
+}
 a {
     color: brown;
 }
@@ -92,4 +109,15 @@ p {
     z-index: 1001;
     display: none;
     pointer-events: none;
+}
+
+#text-viewer {
+    color: white;
+    font-size: 18px;
+    line-height: 1.6;
+    max-width: 800px;
+    padding: 40px;
+    display: none;
+    overflow-y: auto;
+    max-height: 80vh;
 }
