@@ -58,12 +58,19 @@ body {
 #thumbs .thumb.text-block .text-content {
     color: white;
     font-size: 11px;
-    line-height: 1.3;
+    line-height: 1.4;
     overflow: hidden;
     text-overflow: ellipsis;
     display: -webkit-box;
     -webkit-line-clamp: 6;
     -webkit-box-orient: vertical;
+    white-space: normal;
+}
+#thumbs .thumb.text-block .text-content strong {
+    font-weight: bold;
+}
+#thumbs .thumb.text-block .text-content em {
+    font-style: italic;
 }
 a {
     color: brown;
@@ -120,4 +127,16 @@ p {
     display: none;
     overflow-y: auto;
     max-height: 80vh;
+    white-space: normal;
+}
+#text-viewer strong {
+    font-weight: bold;
+}
+#text-viewer em {
+    font-style: italic;
+}
+#text-viewer br {
+    display: block;
+    content: "";
+    margin: 0.5em 0;
 }
