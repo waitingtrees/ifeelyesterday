@@ -16,17 +16,6 @@ document.body.appendChild(loadingEl);
 let allImages = [];
 let uniqueUrls = new Set();
 
-// Function to convert markdown-style formatting to HTML
-function formatText(text) {
-    // Convert **bold** to <strong>
-    text = text.replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>');
-    // Convert *italic* to <em>
-    text = text.replace(/\*(.+?)\*/g, '<em>$1</em>');
-    // Convert line breaks to <br>
-    text = text.replace(/\n/g, '<br>');
-    return text;
-}
-
 // Function to create and append thumbnail elements
 function createThumbnail(item) {
     if (item.class == 'Image' && !uniqueUrls.has(item.image.display.url)) {
@@ -47,11 +36,14 @@ function createThumbnail(item) {
     } else if (item.class == 'Text') {
         let thumb_el = document.createElement('div');
         thumb_el.classList.add('thumb', 'text-block');
-        const formattedContent = formatText(item.content);
-        const escapedContent = formattedContent.replace(/"/g, '&quot;');
+        
+        // Are.na returns either item.content (plain text) or item.content_html (formatted HTML)
+        // We'll use content_html if available, otherwise fall back to content
+        const rawContent = item.content_html || item.content || '';
+        const escapedContent = rawContent.replace(/"/g, '&quot;');
         const escapedTitle = (item.title || '').replace(/"/g, '&quot;');
-        // Store the raw content for display in thumbnail
-        thumb_el.innerHTML = `<div class="text-content" data-content="${escapedContent}" data-title="${escapedTitle}">${formattedContent}</div>`;
+        
+        thumb_el.innerHTML = `<div class="text-content" data-content="${escapedContent}" data-title="${escapedTitle}">${rawContent}</div>`;
         
         // Add click listener for text blocks
         thumb_el.addEventListener('click', e => {
