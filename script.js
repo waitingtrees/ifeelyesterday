@@ -21,7 +21,7 @@ function createThumbnail(item) {
     if (item.class == 'Image' && !uniqueUrls.has(item.image.display.url)) {
         let thumb_el = document.createElement('div');
         thumb_el.classList.add('thumb');
-        thumb_el.innerHTML = `<img src="${item.image.thumb.url}" data-large="${item.image.display.url}" data-title="${item.title || ''}">`;
+        thumb_el.innerHTML = `<img src="${item.image.thumb.url}" data-large="${item.image.large.url}" data-title="${item.title || ''}">`;
         thumb_el.classList.add('image');
         
         // Add click listener immediately for each thumbnail
@@ -119,6 +119,26 @@ viewer.appendChild(titleEl);
 // Track current image index
 let currentImageIndex = -1;
 
+// Function to preload adjacent images for faster navigation
+function preloadAdjacentImages(index) {
+    const thumbs = Array.from(thumbs_el.children);
+    // Preload 3 images in each direction for faster desktop navigation
+    const indicesToPreload = [
+        index - 3, index - 2, index - 1,
+        index + 1, index + 2, index + 3
+    ];
+
+    indicesToPreload.forEach(i => {
+        if (i >= 0 && i < thumbs.length) {
+            const img = thumbs[i].querySelector('img');
+            if (img && img.dataset.large) {
+                const preloadImg = new Image();
+                preloadImg.src = img.dataset.large;
+            }
+        }
+    });
+}
+
 // Function to show text at specific index
 function showText(index) {
     const thumbs = Array.from(thumbs_el.children);
@@ -157,6 +177,7 @@ function showImage(index) {
     const thumbs = Array.from(thumbs_el.children);
     if (index >= 0 && index < thumbs.length) {
         const thumb = thumbs[index];
+        const wasViewerOpen = viewer.style.display === 'flex';
         
         // Hide text viewer if it exists
         const textViewer = document.querySelector('#text-viewer');
@@ -170,8 +191,30 @@ function showImage(index) {
         
         const img = thumb.querySelector('img');
         viewer.style.display = 'flex';
+        
+        // Lock scrolling on first open
+        if (!wasViewerOpen) {
+            document.documentElement.classList.add('viewer-open');
+            document.body.classList.add('viewer-open');
+        }
+
+        // Immediately hide the image
+        viewer_img.classList.remove('loaded');
         viewer_img.style.display = 'block';
-        viewer_img.src = img.dataset.large;
+        
+        // Force reflow to ensure class is removed before we continue
+        void viewer_img.offsetWidth;
+        
+        // Clear the image source
+        viewer_img.src = '';
+        
+        // Load the large image
+        const largeImg = new Image();
+        largeImg.onload = () => {
+            viewer_img.src = img.dataset.large;
+            viewer_img.classList.add('loaded');
+        };
+        largeImg.src = img.dataset.large;
         
         // Show title if it exists
         const title = img.dataset.title;
@@ -183,6 +226,9 @@ function showImage(index) {
         }
         
         currentImageIndex = index;
+        
+        // Preload adjacent images
+        preloadAdjacentImages(index);
     }
 }
 
@@ -190,10 +236,16 @@ function showImage(index) {
 function closeViewer() {
     viewer.style.display = 'none';
     viewer_img.src = '';
+    viewer_img.classList.remove('loaded');
+    
     const textViewer = document.querySelector('#text-viewer');
     if (textViewer) textViewer.style.display = 'none';
     titleEl.style.display = 'none';
     currentImageIndex = -1;
+    
+    // Unlock scrolling
+    document.documentElement.classList.remove('viewer-open');
+    document.body.classList.remove('viewer-open');
 }
 
 // Add keyboard event listeners
@@ -217,3 +269,33 @@ document.addEventListener('keydown', (e) => {
 
 // Update click handlers
 viewer.addEventListener('click', closeViewer);
+
+// Touch swipe support for mobile
+let touchStartX = 0;
+let touchEndX = 0;
+const minSwipeDistance = 50;
+
+viewer.addEventListener('touchstart', (e) => {
+    touchStartX = e.changedTouches[0].screenX;
+}, { passive: true });
+
+viewer.addEventListener('touchend', (e) => {
+    touchEndX = e.changedTouches[0].screenX;
+    handleSwipe();
+}, { passive: true });
+
+function handleSwipe() {
+    const swipeDistance = touchEndX - touchStartX;
+
+    if (Math.abs(swipeDistance) < minSwipeDistance) {
+        return; // Swipe too short, ignore
+    }
+
+    if (swipeDistance > 0) {
+        // Swiped right - show previous image
+        showImage(currentImageIndex - 1);
+    } else {
+        // Swiped left - show next image
+        showImage(currentImageIndex + 1);
+    }
+}
