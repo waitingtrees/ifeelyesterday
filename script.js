@@ -56,6 +56,32 @@ function createThumbnail(item) {
     }
 }
 
+// Titles are stamped "YY.MM.DD phrase" by the posting pipeline. That stamp is
+// the day the photo was *taken*; connection order is the day it was posted, and
+// the two drift apart every time a backlog of days gets caught up at once.
+const TITLE_DATE = /^(\d\d)\.(\d\d)\.(\d\d)\b/;
+
+// Day a block belongs to, as a sortable string. Blocks from the old bulk
+// imports carry no stamp, so they fall back to when they were connected.
+function blockDate(item) {
+    const stamped = TITLE_DATE.exec(item.title || '');
+    if (stamped) {
+        return `20${stamped[1]}-${stamped[2]}-${stamped[3]}`;
+    }
+
+    return (item.connected_at || '').slice(0, 10);
+}
+
+// Newest day first, and newest-posted first inside a day.
+function newestFirst(a, b) {
+    const byDay = blockDate(b).localeCompare(blockDate(a));
+    if (byDay !== 0) {
+        return byDay;
+    }
+
+    return (b.connected_at || '').localeCompare(a.connected_at || '');
+}
+
 // Function to fetch a page of contents
 async function fetchPage(page = 1, per = 100) {
     try {
@@ -73,32 +99,34 @@ async function fetchPage(page = 1, per = 100) {
 
 // Main function to fetch all contents
 async function fetchAllContents() {
+    const PER_PAGE = 100;
+    let blocks = [];
     let page = 1;
     let hasMore = true;
-    
-    while (hasMore) {
-        const data = await fetchPage(page, 20);
-        if (!data) break;
-        
-        data.contents.forEach(block => {
-            createThumbnail(block);
-        });
 
-        // Set favicon using first image (only on first page)
-        if (page === 1 && data.contents.length > 0) {
-            const firstImage = data.contents[0];
-            if (firstImage.class === 'Image') {
-                const favicon = document.createElement('link');
-                favicon.rel = 'icon';
-                favicon.href = firstImage.image.thumb.url;
-                document.head.appendChild(favicon);
-            }
-        }
-        
-        hasMore = data.contents.length === 20;
+    // Every block has to be in hand before the first one can be drawn — the
+    // order comes from the dates in the titles, not from the order Are.na
+    // hands them over.
+    while (hasMore) {
+        const data = await fetchPage(page, PER_PAGE);
+        if (!data) break;
+
+        blocks = blocks.concat(data.contents);
+        hasMore = data.contents.length === PER_PAGE;
         page++;
     }
-    
+
+    blocks.sort(newestFirst);
+    blocks.forEach(block => createThumbnail(block));
+
+    const newest = blocks.find(block => block.class === 'Image');
+    if (newest) {
+        const favicon = document.createElement('link');
+        favicon.rel = 'icon';
+        favicon.href = newest.image.thumb.url;
+        document.head.appendChild(favicon);
+    }
+
     // Hide loading element when done
     loadingEl.style.display = 'none';
     console.log(`Loaded ${allImages.length} items`);
